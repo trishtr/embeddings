@@ -1,0 +1,65 @@
+databases:
+  source1:
+    connection_string: "sqlite:///data/source1.db"
+    table_name: "providers"
+    description: "Primary healthcare provider database"
+
+  source2:
+    connection_string: "sqlite:///data/source2.db"
+    table_name: "physicians"
+    description: "Secondary healthcare provider database"
+
+  target:
+    connection_string: "sqlite:///data/target.db"
+    table_name: "healthcare_providers"
+    description: "Unified healthcare provider database"
+
+mapping:
+  confidence_threshold: 0.7
+  export_mappings: true
+  mapping_history_file: "data/mapping_history.json"
+
+embedding:
+  model_name: "all-MiniLM-L6-v2"
+  cache_embeddings: true
+  cache_dir: "data/embedding_cache"
+  batch_size: 32
+  use_gpu: true
+
+profiling:
+  sample_size: 1000
+  export_profiles: true
+  profiles_dir: "data/profiles"
+  enable_pre_mapping_analysis: true
+  enable_post_mapping_comparison: true
+
+cloud_cache:
+  # Azure Cache for Redis
+  redis_url: null # "redis://your-redis-endpoint:6379"
+
+  # Azure Blob Storage
+  blob_storage_url: null # "https://your-storage-account.blob.core.windows.net"
+
+  # Azure Cosmos DB
+  cosmos_endpoint: null # "https://your-cosmos-account.documents.azure.com:443/"
+
+  # Local cache directory
+  local_cache_dir: "data/cache"
+
+performance:
+  # Memory cache settings
+  memory_cache_max_size: 10000
+  memory_cache_ttl: 7200 # 2 hours
+
+  # Batch processing
+  batch_size: 32
+
+  # GPU settings
+  use_gpu: true
+  gpu_memory_fraction: 0.8
+
+monitoring:
+  enable_logging: true
+  log_level: "INFO"
+  export_metrics: true
+  metrics_file: "data/metrics.json"

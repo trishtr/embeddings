@@ -1,0 +1,274 @@
+# Healthcare Domain Rules and Context Configuration
+
+# Domain Context Definitions
+domain_contexts:
+  provider:
+    description: "Medical service provider context including doctors, nurses, and other healthcare professionals"
+    key_terms:
+      - provider
+      - doctor
+      - physician
+      - nurse
+      - practitioner
+      - specialist
+      - surgeon
+      - clinician
+    context_rules:
+      - "Provider identifiers must follow standard format (e.g., NPI number)"
+      - "Specialization must be from approved medical specialties list"
+      - "License numbers must be validated against state medical boards"
+
+  patient:
+    description: "Patient/healthcare consumer context including demographics and medical history"
+    key_terms:
+      - patient
+      - member
+      - beneficiary
+      - person
+      - individual
+      - consumer
+    context_rules:
+      - "Patient identifiers must be HIPAA compliant"
+      - "Date of birth must be validated for reasonable age range"
+      - "Gender must follow approved clinical coding standards"
+
+  facility:
+    description: "Healthcare facility context including hospitals, clinics, and care centers"
+    key_terms:
+      - hospital
+      - clinic
+      - facility
+      - center
+      - practice
+      - institution
+      - department
+    context_rules:
+      - "Facility identifiers must follow CMS certification number format"
+      - "Facility type must be from approved healthcare facility types"
+      - "Location must include valid geocoding information"
+
+# Field Type Rules
+field_type_rules:
+  identifiers:
+    npi:
+      format: "^\\d{10}$"
+      validation: "Must be 10 digits and pass NPI checksum algorithm"
+    medical_license:
+      format: "^[A-Z]{2}\\d{6}$"
+      validation: "Two-letter state code followed by 6 digits"
+    patient_id:
+      format: "^P\\d{8}$"
+      validation: "Must be HIPAA compliant and encrypted in transit"
+
+  dates:
+    date_of_birth:
+      format: "YYYY-MM-DD"
+      validation: "Must be within reasonable age range (0-120 years)"
+    service_date:
+      format: "YYYY-MM-DD"
+      validation: "Cannot be future date except for appointments"
+    effective_date:
+      format: "YYYY-MM-DD"
+      validation: "Must be valid business date"
+
+  codes:
+    diagnosis:
+      format: "ICD-10"
+      validation: "Must be valid ICD-10 code"
+    procedure:
+      format: "CPT/HCPCS"
+      validation: "Must be valid CPT or HCPCS code"
+    specialty:
+      format: "Taxonomy"
+      validation: "Must be valid healthcare provider taxonomy code"
+
+# Mapping Rules
+mapping_rules:
+  provider_rules:
+    - rule: "Provider name fields must preserve full name structure"
+      fields:
+        - first_name
+        - middle_name
+        - last_name
+        - suffix
+      priority: high
+    - rule: "Provider specialty must map to standard taxonomy codes"
+      fields:
+        - specialty
+        - sub_specialty
+      priority: high
+    - rule: "Provider identifiers must maintain uniqueness"
+      fields:
+        - npi
+        - license_number
+      priority: critical
+
+  patient_rules:
+    - rule: "Patient demographic fields must preserve granularity"
+      fields:
+        - date_of_birth
+        - gender
+        - ethnicity
+        - race
+      priority: high
+    - rule: "Patient contact information must be validated"
+      fields:
+        - address
+        - phone
+        - email
+      priority: medium
+    - rule: "Patient insurance information must be complete"
+      fields:
+        - insurance_id
+        - group_number
+        - plan_type
+      priority: high
+
+  facility_rules:
+    - rule: "Facility address must include all components"
+      fields:
+        - street_address
+        - city
+        - state
+        - zip_code
+        - country
+      priority: high
+    - rule: "Facility type must map to standard classification"
+      fields:
+        - facility_type
+        - service_level
+      priority: medium
+
+# Privacy and Security Rules
+privacy_rules:
+  phi_fields:
+    - rule: "Protected Health Information must be identified and handled according to HIPAA"
+    - fields:
+        - patient_name
+        - date_of_birth
+        - social_security_number
+        - medical_record_number
+        - health_plan_number
+        - email_address
+        - phone_number
+        - address
+    - handling:
+        - "Must be encrypted at rest"
+        - "Must be encrypted in transit"
+        - "Access must be logged"
+        - "Must be excluded from non-production environments"
+
+  sensitive_fields:
+    - rule: "Sensitive information requires special handling"
+    - fields:
+        - mental_health_notes
+        - substance_abuse_history
+        - hiv_status
+        - genetic_information
+    - handling:
+        - "Requires explicit consent for sharing"
+        - "Must be segmented in data storage"
+        - "Special access controls required"
+
+# Data Quality Rules
+quality_rules:
+  completeness:
+    required_fields:
+      provider:
+        - npi
+        - first_name
+        - last_name
+        - specialty
+      patient:
+        - patient_id
+        - date_of_birth
+        - gender
+      facility:
+        - facility_id
+        - facility_name
+        - address
+
+  validation:
+    cross_field:
+      - rule: "Service date must be after provider license effective date"
+      - rule: "Patient age must be appropriate for service type"
+      - rule: "Facility service level must support procedure type"
+
+  standardization:
+    naming_conventions:
+      provider: "Title case for names, uppercase for credentials"
+      facility: "Title case for names, uppercase for abbreviations"
+      patient: "Title case for names, standard format for identifiers"
+
+# Transformation Rules
+transformation_rules:
+  name_handling:
+    - rule: "Split full names into components"
+      source: "full_name"
+      target:
+        - first_name
+        - middle_name
+        - last_name
+        - suffix
+    - rule: "Standardize credentials format"
+      source: "credentials"
+      format: "Comma-separated, uppercase"
+
+  address_handling:
+    - rule: "Parse unstructured addresses"
+      source: "address"
+      target:
+        - street_number
+        - street_name
+        - unit
+        - city
+        - state
+        - zip_code
+    - rule: "Standardize state codes"
+      source: "state"
+      format: "Two-letter uppercase"
+
+  phone_handling:
+    - rule: "Standardize phone formats"
+      source: "phone"
+      format: "(XXX) XXX-XXXX"
+      extensions: "xXXXX"
+
+# Context Enhancement Rules
+context_enhancement:
+  provider_context:
+    - rule: "Enhance provider mapping with specialty context"
+      fields:
+        - specialty
+        - sub_specialty
+      context_source: "provider taxonomy codes"
+    - rule: "Enhance provider mapping with practice context"
+      fields:
+        - practice_type
+        - service_location
+      context_source: "facility types"
+
+  patient_context:
+    - rule: "Enhance patient mapping with demographic context"
+      fields:
+        - age
+        - gender
+        - location
+      context_source: "population health data"
+    - rule: "Enhance patient mapping with care context"
+      fields:
+        - care_type
+        - service_level
+      context_source: "clinical protocols"
+
+  facility_context:
+    - rule: "Enhance facility mapping with service context"
+      fields:
+        - service_types
+        - specialties
+      context_source: "healthcare facility classifications"
+    - rule: "Enhance facility mapping with location context"
+      fields:
+        - service_area
+        - accessibility
+      context_source: "geographic health data"
