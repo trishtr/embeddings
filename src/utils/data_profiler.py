@@ -611,6 +611,191 @@ class PostMappingProfiler:
         
         return abs(source_null_ratio - target_null_ratio) < 0.2
 
+    def compare_profiles_enhanced(self, 
+                                 source_profile: Dict[str, Any], 
+                                 target_profile: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhanced comparison that works even when column names are different"""
+        comparison = {
+            "schema_differences": {
+                "source_only_columns": [],
+                "target_only_columns": [],
+                "type_mismatches": [],
+                "potential_mappings": {}
+            },
+            "data_distribution": {
+                "value_ranges": {},
+                "null_ratios": {},
+                "compatibility_analysis": {}
+            },
+            "similarity_analysis": {
+                "overall_similarity_score": 0.0,
+                "field_similarities": {},
+                "best_matches": {}
+            }
+        }
+        
+        # Get column sets
+        source_cols = set(source_profile["schema"]["columns"].keys())
+        target_cols = set(target_profile["schema"]["columns"].keys())
+        
+        # Basic exact name comparison
+        common_cols = source_cols & target_cols
+        comparison["schema_differences"]["source_only_columns"] = list(source_cols - target_cols)
+        comparison["schema_differences"]["target_only_columns"] = list(target_cols - source_cols)
+        
+        # Enhanced analysis for different column names
+        if not common_cols:  # No exact name matches
+            comparison["schema_differences"]["potential_mappings"] = self._find_potential_mappings_by_similarity(
+                source_profile, target_profile
+            )
+            
+            # Analyze data compatibility for potential matches
+            comparison["data_distribution"]["compatibility_analysis"] = self._analyze_data_compatibility(
+                source_profile, target_profile, 
+                comparison["schema_differences"]["potential_mappings"]
+            )
+            
+            # Calculate overall similarity score
+            comparison["similarity_analysis"]["overall_similarity_score"] = self._calculate_overall_similarity(
+                comparison["schema_differences"]["potential_mappings"]
+            )
+            
+        else:  # Some exact name matches exist
+            # Handle exact matches
+            for col in common_cols:
+                source_type = source_profile["schema"]["columns"][col]["type"]
+                target_type = target_profile["schema"]["columns"][col]["type"]
+                
+                if source_type != target_type:
+                    comparison["schema_differences"]["type_mismatches"].append({
+                        "column": col,
+                        "source_type": source_type,
+                        "target_type": target_type
+                    })
+                
+                # Compare value distributions for exact matches
+                source_stats = source_profile["statistics"]["columns"][col]
+                target_stats = target_profile["statistics"]["columns"][col]
+                
+                comparison["data_distribution"]["value_ranges"][col] = {
+                    "source": {k: source_stats[k] for k in ["min", "max", "mean", "std"] 
+                              if k in source_stats},
+                    "target": {k: target_stats[k] for k in ["min", "max", "mean", "std"]
+                              if k in target_stats}
+                }
+                
+                # Compare null ratios
+                source_null_ratio = source_stats["null_count"] / source_stats["count"]
+                target_null_ratio = target_stats["null_count"] / target_stats["count"]
+                comparison["data_distribution"]["null_ratios"][col] = {
+                    "source": source_null_ratio,
+                    "target": target_null_ratio
+                }
+            
+            # Also find potential mappings for non-exact matches
+            remaining_source = source_cols - common_cols
+            remaining_target = target_cols - common_cols
+            
+            if remaining_source and remaining_target:
+                comparison["schema_differences"]["potential_mappings"] = self._find_potential_mappings_by_similarity(
+                    source_profile, target_profile, remaining_source, remaining_target
+                )
+        
+        return comparison
+    
+    def _find_potential_mappings_by_similarity(self, 
+                                             source_profile: Dict[str, Any], 
+                                             target_profile: Dict[str, Any],
+                                             source_cols: set = None,
+                                             target_cols: set = None) -> Dict[str, Any]:
+        """Find potential mappings using similarity analysis"""
+        if source_cols is None:
+            source_cols = set(source_profile["schema"]["columns"].keys())
+        if target_cols is None:
+            target_cols = set(target_profile["schema"]["columns"].keys())
+        
+        potential_mappings = {}
+        
+        for source_col in source_cols:
+            best_matches = []
+            for target_col in target_cols:
+                similarity = self._calculate_field_similarity(
+                    source_col, target_col,
+                    source_profile["statistics"]["columns"][source_col],
+                    target_profile["statistics"]["columns"][target_col]
+                )
+                best_matches.append((target_col, similarity))
+            
+            # Sort by similarity and take top 3
+            best_matches.sort(key=lambda x: x[1], reverse=True)
+            potential_mappings[source_col] = {
+                "top_matches": best_matches[:3],
+                "best_match": best_matches[0] if best_matches else None,
+                "confidence": best_matches[0][1] if best_matches else 0.0
+            }
+        
+        return potential_mappings
+    
+    def _analyze_data_compatibility(self, 
+                                  source_profile: Dict[str, Any], 
+                                  target_profile: Dict[str, Any],
+                                  potential_mappings: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze data compatibility for potential mappings"""
+        compatibility_analysis = {}
+        
+        for source_col, mapping_info in potential_mappings.items():
+            best_match = mapping_info.get("best_match")
+            if best_match:
+                target_col = best_match[0]
+                source_stats = source_profile["statistics"]["columns"][source_col]
+                target_stats = target_profile["statistics"]["columns"][target_col]
+                
+                compatibility_analysis[f"{source_col} -> {target_col}"] = {
+                    "type_compatibility": self._are_types_compatible(
+                        source_profile["schema"]["columns"][source_col]["type"],
+                        target_profile["schema"]["columns"][target_col]["type"]
+                    ),
+                    "range_compatibility": self._are_ranges_compatible(source_stats, target_stats),
+                    "distribution_compatibility": self._are_distributions_compatible(source_stats, target_stats),
+                    "overall_compatibility_score": self._calculate_compatibility_score(
+                        source_stats, target_stats,
+                        source_profile["schema"]["columns"][source_col]["type"],
+                        target_profile["schema"]["columns"][target_col]["type"]
+                    )
+                }
+        
+        return compatibility_analysis
+    
+    def _calculate_overall_similarity(self, potential_mappings: Dict[str, Any]) -> float:
+        """Calculate overall similarity score for the schema comparison"""
+        if not potential_mappings:
+            return 0.0
+        
+        total_confidence = sum(mapping["confidence"] for mapping in potential_mappings.values())
+        return total_confidence / len(potential_mappings)
+    
+    def _calculate_compatibility_score(self, 
+                                     source_stats: Dict[str, Any], 
+                                     target_stats: Dict[str, Any],
+                                     source_type: str, 
+                                     target_type: str) -> float:
+        """Calculate overall compatibility score between two fields"""
+        score = 0.0
+        
+        # Type compatibility (40% weight)
+        if self._are_types_compatible(source_type, target_type):
+            score += 0.4
+        
+        # Range compatibility (30% weight)
+        if self._are_ranges_compatible(source_stats, target_stats):
+            score += 0.3
+        
+        # Distribution compatibility (30% weight)
+        if self._are_distributions_compatible(source_stats, target_stats):
+            score += 0.3
+        
+        return score
+
 if __name__ == "__main__":
     # Test data profiling
     from ..db.db_handler import MultiSourceDBHandler
