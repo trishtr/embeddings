@@ -1,0 +1,9 @@
+{
+  "provider_npi": {
+    "target_field": "npi_number",
+    "confidence": 1.0,
+    "agreement_level": 0.99,
+    "method": "high_confidence_agreement",
+    "uncertainty_factors": []
+  }
+}

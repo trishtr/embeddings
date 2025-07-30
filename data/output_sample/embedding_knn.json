@@ -1,0 +1,26 @@
+{
+  "provider_npi": {
+    "candidates": [
+      { "target_field": "npi_number", "similarity": 0.94 },
+      { "target_field": "provider_id", "similarity": 0.72 },
+      { "target_field": "national_id", "similarity": 0.65 }
+    ],
+    "method": "embedding_knn"
+  },
+  "dr_name": {
+    "candidates": [
+      { "target_field": "provider_name", "similarity": 0.88 },
+      { "target_field": "physician_name", "similarity": 0.85 },
+      { "target_field": "doctor_name", "similarity": 0.82 }
+    ],
+    "method": "embedding_knn"
+  },
+  "specialty_cd": {
+    "candidates": [
+      { "target_field": "medical_specialty", "similarity": 0.78 },
+      { "target_field": "specialty_type", "similarity": 0.75 },
+      { "target_field": "practice_area", "similarity": 0.68 }
+    ],
+    "method": "embedding_knn"
+  }
+}

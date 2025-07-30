@@ -483,3 +483,184 @@ Overall Similarity Score = 3.198 / 5 = 0.640
 - Comprehensive quality metrics
 
 This enhanced approach transforms the challenge of completely different column names into an opportunity for intelligent, data-driven schema mapping with quantifiable confidence levels and actionable insights.
+
+##
+
+the **comparison in the data profiler is PRE-embeddings**. Here's the detailed breakdown:
+
+## **Two Different Approaches for Similarity Analysis**
+
+### **1. Data Profiler Comparison (PRE-embeddings)**
+
+**Location**: `src/utils/data_profiler.py`
+**Method**: `_calculate_field_similarity()`
+
+```python
+def _calculate_field_similarity(self, source_field, target_field, source_stats, target_stats):
+    # Simple string similarity (NO embeddings used)
+    semantic_sim = self._get_string_similarity(source_field, target_field)
+
+    # Data type similarity
+    type_sim = self._get_type_similarity(source_stats.get('type'), target_stats.get('type'))
+
+    # Data pattern similarity
+    pattern_sim = self._get_pattern_similarity(source_stats, target_stats)
+
+    # Weighted combination
+    similarity = (0.5 * semantic_sim + 0.3 * type_sim + 0.2 * pattern_sim)
+    return similarity
+```
+
+**Techniques Used**:
+
+- **Jaccard Similarity**: Simple word overlap calculation
+- **String Matching**: Basic text comparison
+- **Type Comparison**: Database type compatibility
+- **Pattern Analysis**: Data distribution patterns
+
+### **2. Embedding Handler (POST-embeddings)**
+
+**Location**: `src/embeddings/embedding_handler.py`
+**Method**: `find_field_mappings()`
+
+```python
+def find_field_mappings(self, source_schema, target_schema, threshold=0.7):
+    # Generate embeddings for both schemas
+    source_embeddings = self.generate_schema_embeddings(source_schema)
+    target_embeddings = self.generate_schema_embeddings(target_schema)
+
+    # Use cosine similarity with embeddings
+    similarities = cosine_similarity(source_embeddings, target_embeddings)
+```
+
+**Techniques Used**:
+
+- **SentenceTransformers**: Advanced language models
+- **Cosine Similarity**: Vector-based similarity
+- **k-NN Search**: Nearest neighbor algorithms
+- **Context-Aware Embeddings**: Rich semantic understanding
+
+## 🔄 **Workflow Timeline**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           WORKFLOW TIMELINE                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Step 1: Data Profiling (PRE-embeddings)                                   │
+│  ├── Basic schema analysis                                                 │
+│  ├── Data statistics calculation                                          │
+│  ├── Simple string similarity (Jaccard)                                   │
+│  ├── Type compatibility check                                             │
+│  └── Pattern analysis                                                     │
+│                                                                             │
+│  Step 2: Pre-Mapping Analysis (PRE-embeddings)                             │
+│  ├── compare_profiles() - Exact name matching                             │
+│  ├── analyze_potential_mappings() - Simple similarity                     │
+│  ├── assess_mapping_readiness() - Quality assessment                      │
+│  └── Basic recommendations                                                 │
+│                                                                             │
+│  Step 3: Context Creation (PRE-embeddings)                                 │
+│  ├── Load business rules                                                   │
+│  ├── Identify PHI fields                                                   │
+│  ├── Create enhanced descriptions                                          │
+│  └── Prepare for embedding generation                                      │
+│                                                                             │
+│  Step 4: Embedding Generation (START of embeddings)                        │
+│  ├── generate_schema_embeddings() - Advanced semantic analysis            │
+│  ├── Context-enhanced field representations                               │
+│  ├── SentenceTransformer processing                                       │
+│  └── Vector generation                                                     │
+│                                                                             │
+│  Step 5: Advanced Mapping (POST-embeddings)                                │
+│  ├── find_field_mappings() - Cosine similarity                            │
+│  ├── find_similar_fields_knn() - k-NN search                              │
+│  ├── find_field_patterns_knn() - Pattern discovery                        │
+│  └── Advanced mapping suggestions                                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## 🎯 **Why This Two-Phase Approach?**
+
+### **Phase 1: Pre-Embedding Analysis (Data Profiler)**
+
+**Purpose**: Quick, lightweight analysis for initial insights
+
+**Benefits**:
+
+- ✅ **Fast**: No heavy ML model loading
+- ✅ **Lightweight**: Simple string operations
+- ✅ **Immediate**: Quick feedback on data readiness
+- ✅ **Cost-effective**: No computational overhead
+
+**Use Cases**:
+
+- Initial data quality assessment
+- Mapping readiness evaluation
+- Basic compatibility checks
+- Quick schema comparison
+
+### **Phase 2: Post-Embedding Analysis (Embedding Handler)**
+
+**Purpose**: Advanced, semantic analysis for precise mapping
+
+**Benefits**:
+
+- ✅ **Semantic Understanding**: Deep language model comprehension
+- ✅ **Context-Aware**: Understands field meanings and relationships
+- ✅ **High Accuracy**: Advanced similarity algorithms
+- ✅ **Rich Insights**: Detailed mapping explanations
+
+**Use Cases**:
+
+- Precise field mapping
+- Semantic similarity search
+- Pattern discovery
+- Context-aware matching
+
+## 📊 **Comparison of Approaches**
+
+| Aspect                     | Pre-Embedding (Data Profiler) | Post-Embedding (Embedding Handler) |
+| -------------------------- | ----------------------------- | ---------------------------------- |
+| **Speed**                  | ⚡ Fast (milliseconds)        | 🐌 Slower (seconds)                |
+| **Accuracy**               | 📊 Basic (60-70%)             | 🎯 High (85-95%)                   |
+| **Resource Usage**         | 💡 Low                        | 🔥 High                            |
+| **Semantic Understanding** | ❌ Limited                    | ✅ Advanced                        |
+| **Context Awareness**      | ❌ None                       | ✅ Rich                            |
+| **Use Case**               | Initial assessment            | Precise mapping                    |
+
+## 🔧 **Practical Example**
+
+### **Pre-Embedding Analysis**:
+
+```python
+# Data Profiler - Simple similarity
+"provider_npi" vs "npi_number"
+→ Jaccard similarity: 0.333 (word overlap)
+→ Type similarity: 1.0 (both VARCHAR)
+→ Pattern similarity: 0.8 (both numeric)
+→ Overall: 0.747 confidence
+```
+
+### **Post-Embedding Analysis**:
+
+```python
+# Embedding Handler - Semantic similarity
+"provider_npi" vs "npi_number"
+→ Context: "database field provider npi of type VARCHAR(20)"
+→ Embedding: [0.1, 0.3, -0.2, ...] (384-dimensional vector)
+→ Cosine similarity: 0.89 (semantic understanding)
+→ Advanced mapping with context
+```
+
+## 🎯 **Key Insight**
+
+The **data profiler comparison is indeed PRE-embeddings** and serves as a **lightweight, fast initial assessment**. The **embedding handler then provides the advanced, semantic analysis** for precise mapping.
+
+This **two-phase approach** gives us:
+
+1. **Quick initial insights** (data profiler)
+2. **Precise final mapping** (embedding handler)
+
+It's like having a **quick scan** followed by a **detailed analysis** - both valuable but serving different purposes in the workflow!

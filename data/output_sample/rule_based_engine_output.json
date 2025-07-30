@@ -1,0 +1,32 @@
+{
+  "provider_npi": {
+    "confidence": 0.95,
+    "target_field": "npi_number",
+    "pattern": "exact_npi_pattern",
+    "method": "rule_based"
+  },
+  "dr_name": {
+    "confidence": 0.85,
+    "target_field": "provider_name",
+    "pattern": "doctor_name_pattern",
+    "method": "rule_based"
+  },
+  "specialty_cd": {
+    "confidence": 0.7,
+    "target_field": "medical_specialty",
+    "pattern": "specialty_code_pattern",
+    "method": "rule_based"
+  },
+  "phone_num": {
+    "confidence": 0.9,
+    "target_field": "contact_phone",
+    "pattern": "phone_pattern",
+    "method": "rule_based"
+  },
+  "email_addr": {
+    "confidence": 0.92,
+    "target_field": "email_address",
+    "pattern": "email_pattern",
+    "method": "rule_based"
+  }
+}
